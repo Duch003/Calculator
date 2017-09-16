@@ -1,11 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Calculator
@@ -17,6 +10,9 @@ namespace Calculator
         Sub = 45,
         Mult = 42,
         Div = 47,
+        Perc = 37, //Pricent rozumiany jest przez następującą konstrukcję: x% z liczby y
+        Pow = 94,
+        Root = 0
     }
 
     public partial class MainCalc : Form
@@ -31,14 +27,8 @@ namespace Calculator
             InitializeComponent();
             act = new Action();
             setAction = newMath = false;
-            btnDot.Enabled = false;
 
         }
-
-        //private void btnClick_dot(object sender, EventArgs e)
-        //{
-        //    resultBox.Text = resultBox.Text + (sender as Button).Text;
-        //}
 
         private void btnClick(object sender, EventArgs e)
         {   //Sprawdz czy nie jest wykonywane nowe działanie
@@ -53,35 +43,51 @@ namespace Calculator
             //Wartość a
             if(setAction == false)
             {
-                a = a + (sender as Button).Text;
-                valA = Convert.ToDouble(a);
+                a = a + (sender as Button).Text;               
             }
             //Wartość b
             else if(setAction == true)
             {
                 b = b + (sender as Button).Text;
-                valB = Convert.ToDouble(b);
-                if(valB == 0 && (byte)act == 47)
+                if(btn0.Enabled == false)
                 {
-                    MessageBox.Show("Nie można dzielić przez zero!", "Błąd dzielenia.", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    b = null;
-                    a = null;
-                    resultBox.Text = null;
-                    setAction = false;
+                    btn0.Enabled = true;
                 }
             }
         }
         //Odczyt i zapis odpowiedniego znaku działania
         private void btnClick_Action(object sender, EventArgs e)
         {   //Ochrona przed zmiana znaku lub wcisnieciem znaku bez liczby
-            if (setAction == true || a == null) 
+            char s = 'a';
+            if (setAction == true || a == null)
                 return;
-            char s = Convert.ToChar((sender as Button).Text);
-            act = (Action)s;
-            if(s == 47) //Blokada 0 przy dzieleniu
+
+            //NISTANDARDOWE I DODATKOWE USTAWIENIA DLA POSZCZEGOLNYCH ZNAKÓW
+            if ((sender as Button).Tag.ToString().Length == 0) //Jeżeli wciśnięty znak to root to przypisz akcję 0
+                act = 0;
+            else if(s == 47) //Jeżeli jest to znak dzielenia, zablokuj 0 (do czasu wciśnięcia innej cyfry)
                 btn0.Enabled = false;
+            else //W innym przypadku postępuj standardowo
+            {
+                s = Convert.ToChar((sender as Button).Tag);
+                act = (Action)s;
+            }   
+            
             setAction = true;
-            resultBox.Text = resultBox.Text + " " + (sender as Button).Text + " ";
+
+            //OBSŁUGA WYŚWIETLACZA
+            if(s == 37) //Jeżeli znak to procent, to nie dodawaj pierwszej spacji (dla lepszego pokazania działania)
+                resultBox.Text = resultBox.Text + (sender as Button).Text + " z ";
+            else if(act == 0) //Jeżeli znak to pierwiastkowanie, to dodaj znak hashtag
+                resultBox.Text = resultBox.Text + " # ";
+            else //W innym wypadku zrób zapis standardowy
+                resultBox.Text = resultBox.Text + " " + (sender as Button).Tag + " ";
+        }
+
+        private void btnClick_Clear(object sender, EventArgs e)
+        {
+            Clear();
+            resultBox.Text = null;
         }
 
         private void btnClick_Equal(object sender, EventArgs e)
@@ -90,22 +96,44 @@ namespace Calculator
             {
                 if(a != null && b != null)
                 {
-                    switch(act)
+                    valA = Convert.ToDouble(a);
+                    valB = Convert.ToDouble(b);
+                    switch (act)
                     {
                         case (Action)42: //Mnożenie
-                            resultBox.Text = resultBox.Text + " = " + (valA * valB);
+                            resultBox.Text = resultBox.Text + " = \n" + (valA * valB);
                             break;
 
                         case (Action)43: //Dodawanie
-                            resultBox.Text = resultBox.Text + " = " + (valA + valB);
+                            resultBox.Text = resultBox.Text + " = \n" + (valA + valB);
                             break;
 
                         case (Action)45: //Odejmowanie
-                            resultBox.Text = resultBox.Text + " = " + (valA - valB);
+                            resultBox.Text = resultBox.Text + " = \n" + (valA - valB);
                             break;
 
                         case (Action)47: //Dzielenie
-                            resultBox.Text = resultBox.Text + " = " + (valA / valB);
+                            resultBox.Text = resultBox.Text + " = \n" + (valA / valB);
+                            break;
+
+                        case (Action)37: //Procent
+                            resultBox.Text = resultBox.Text + " = \n" + ((valA / 100) * valB);
+                            break;
+
+                        case (Action)94: //Potęgowanie
+                            double ans = 1;
+                            for(int i = 0; i < valB; i++)
+                            {
+                                ans = ans * valA;
+                            }
+                            resultBox.Text = resultBox.Text + " = \n" + ans;
+                            break;
+
+                        case (Action)0: //Pierwiastkowanie
+                            if(valB == 2)
+                                resultBox.Text = resultBox.Text + " = \n" + Math.Sqrt(valA);
+                            else
+                                resultBox.Text = resultBox.Text + " = \n" + Sqrt(valB, valA);
                             break;
                     }
                 }
@@ -121,14 +149,47 @@ namespace Calculator
             }
             finally
             {
-                b = null;
-                a = null;
-                setAction = false;
-                newMath = true;
-                valA = 0;
-                valB = 0;
-                btn0.Enabled = true;
+                Clear();
             }
+        }
+
+        private void Clear()
+        {
+            b = null;
+            a = null;
+            setAction = false;
+            newMath = true;
+            valA = 0;
+            valB = 0;
+            btn0.Enabled = true;
+        }
+
+        //ALGORYTM PIERWIASTKOWANIA
+        //Źródła:
+        //1. https://pl.wikipedia.org/wiki/Algorytm_obliczania_pierwiastka_n-tego_stopnia
+        //2. http://www.algorytm.org/algorytmy-arytmetyczne/obliczanie-pierwiastka-n-tego-stopnia.html
+        private double Sqrt(double n, double A)
+        {
+            double[] x = new double[1];
+            x[0] = Math.Abs(A);
+            for(int k = 0; ; k++)
+            {
+                x = DynamicTab(x);
+                x[k + 1] = (1 / n) * (((n - 1) * x[k]) + (A / (Math.Pow(x[k], n - 1))));
+                if ((Math.Abs(x[k] - x[k + 1]) < 1))
+                    return x[k + 1];
+            }
+        }
+        //Mechanizm dynamicznej tablicy dla potrzeb algorytmu pierwiastkowania
+        private double[] DynamicTab(double[] tab)
+        {
+            int length = tab.Length;
+            double[] temp = tab;
+            tab = new double[length + 1];
+            for (int i = 0; i < temp.Length; i++)
+                tab[i] = temp[i];
+            
+            return tab;
         }
     }
 }
