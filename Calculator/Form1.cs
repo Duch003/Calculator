@@ -3,98 +3,158 @@ using System.Windows.Forms;
 
 namespace Calculator
 {
-    //Tutaj trzymam wartości poszczególnych działań
+    //Tutaj trzymam wartości poszczególnych działań w oparciu o tablicę ascii
     enum Action : byte
     {
-        Add = 43,
-        Sub = 45,
-        Mult = 42,
-        Div = 47,
-        Perc = 37, //Pricent rozumiany jest przez następującą konstrukcję: x% z liczby y
-        Pow = 94,
-        Root = 0
+        Add = 43,  // +
+        Sub = 45,  // -
+        Mult = 42, // *
+        Div = 47,  // /
+        Perc = 37, // % rozumiany jest przez następującą konstrukcję: x% z liczby y
+        Pow = 94,  // ^
+        Sqrt = 35, // #
+        Equal = 61,// =
+        Clear = 126// ~
     }
 
     public partial class MainCalc : Form
     {
         Action act;
         string a, b;
-        bool setAction, newMath;
+        bool setAction, newMath; //Warunki kolejno: czy jest ustawiony znak działania, czy rozpocząto nowe działanie
+        bool setNum; //Warunek czy jest wpisana pierwsza liczba
         double valA, valB;
 
         public MainCalc()
         {
             InitializeComponent();
             act = new Action();
-            setAction = newMath = false;
-
+            setAction = newMath = setNum = false;
+            KeyPreview = true;
+            btnDot.Enabled = false;
         }
 
+        //PRZYCISKI W OKNIE KALKULATORA
+        //TUTAJ OBOWIĄZUJE TABLICA ASCII
         private void btnClick(object sender, EventArgs e)
-        {   //Sprawdz czy nie jest wykonywane nowe działanie
-            if(newMath)
+        {
+            char value = Convert.ToChar((sender as Button).Tag);
+            if (value >= 48 && value <= 57)
+            {
+                Number(value);
+            }
+            else if (value == 35 || value == 43 || value == 45 || value == 42 || value == 47 || value == 37 || value == 94)
+            {
+                Sign(value);
+            }
+            else if(value == 61)
+            {
+                Solve();
+            }
+            else if(value == 126) //Znak ~
+            {
+                Clear();
+                resultBox.Text = null;
+            }
+            
+        }
+
+        //PRZYCISKI NA KLAWIATURZE
+        //TUTAJ OBOWIĄZUJE OZNAKOWANIE PRZYCISKÓW NA KLAWIATURZE
+        //e.KeyChar zwraca znak przekonwertowany już na ascii
+        //Źródło: https://www.w3.org/2002/09/tests/keys-cancel2.html
+        private void KeyboardKeyClick(object sender, KeyPressEventArgs e)
+        {
+            if ((e.KeyChar >= 48 && e.KeyChar <= 57) || e.KeyChar == 46 || e.KeyChar == 44)
+            {
+                Number(e.KeyChar);               
+            }
+            else if(e.KeyChar == 35 || e.KeyChar == 43 || e.KeyChar == 45 || e.KeyChar == 42 || e.KeyChar == 47 || e.KeyChar == 37 || e.KeyChar == 94)
+            {
+                Sign(e.KeyChar);
+            }
+            else if(e.KeyChar == 13) //Znaki ENTER i numENTER, są to znaki /r, nowej linii
+            {
+                Solve();
+            }
+            else if(e.KeyChar == 27) //Znak ESC
+            {
+                Clear();
+                resultBox.Text = null;
+            }
+            e.Handled = true;
+        }
+
+        private void Sign(char value)
+        {
+            //Ochrona przed zmiana znaku lub wcisnieciem znaku bez liczby
+            if (setAction == true || a == null)
+                return;
+
+            //NISTANDARDOWE I DODATKOWE USTAWIENIA DLA POSZCZEGOLNYCH ZNAKÓW
+            if (value == 47) //Jeżeli jest to znak dzielenia, zablokuj 0 (do czasu wciśnięcia innej cyfry)
+            {
+                btn0.Enabled = false;
+                act = (Action)value;
+            }               
+            else //W innym przypadku postępuj standardowo
+            {
+                act = (Action)value;
+            }
+
+            //Oznaczenie setAction powoduje że następne cyfry są traktowane jako druga wartość
+            setAction = true;
+
+            //OBSŁUGA WYŚWIETLACZA
+            if (value == 37) //Jeżeli znak to procent, to nie dodawaj pierwszej spacji (dla lepszego pokazania działania)
+                resultBox.Text = resultBox.Text + value + " z ";
+            else //W innym wypadku zrób zapis standardowy
+                resultBox.Text = resultBox.Text + " " + value + " ";
+        }
+
+        private void Number(char value)
+        {
+            //Zabezpeiczenie przed wciśnięciem znaku kropki przed wpisaniem pierwszej cyfry
+            //Oraz przed wpisaniem zera po znaku dzielenia
+            if ((btnDot.Enabled == false && (value == 44 || value == 46)) || (value == 48 && btn0.Enabled == false))
+            {
+                return;
+            }
+            //Sprawdz czy nie jest wykonywane nowe działanie
+            if (newMath)
             {
                 resultBox.Text = null;
                 newMath = false;
             }
-            //Wypisywanie kliknięć na ekranie
-            resultBox.Text = resultBox.Text + (sender as Button).Text;
+            //OBSŁUGA WYŚWIETLACZA
+            resultBox.Text = resultBox.Text + value;
+
             //W zależności od tego którą liczbę wpisujemy, tam zapisze się wartość
             //Wartość a
-            if(setAction == false)
+            if (setAction == false)
             {
-                a = a + (sender as Button).Text;               
+                a = a + value;
+                if(btnDot.Enabled == false)
+                {
+                    btnDot.Enabled = true;
+                }
             }
             //Wartość b
-            else if(setAction == true)
+            else if (setAction == true)
             {
-                b = b + (sender as Button).Text;
-                if(btn0.Enabled == false)
+                b = b + value;
+                if (btn0.Enabled == false)
                 {
                     btn0.Enabled = true;
                 }
             }
         }
-        //Odczyt i zapis odpowiedniego znaku działania
-        private void btnClick_Action(object sender, EventArgs e)
-        {   //Ochrona przed zmiana znaku lub wcisnieciem znaku bez liczby
-            char s = 'a';
-            if (setAction == true || a == null)
-                return;
 
-            //NISTANDARDOWE I DODATKOWE USTAWIENIA DLA POSZCZEGOLNYCH ZNAKÓW
-            if ((sender as Button).Tag.ToString().Length == 0) //Jeżeli wciśnięty znak to root to przypisz akcję 0
-                act = 0;
-            else if(s == 47) //Jeżeli jest to znak dzielenia, zablokuj 0 (do czasu wciśnięcia innej cyfry)
-                btn0.Enabled = false;
-            else //W innym przypadku postępuj standardowo
-            {
-                s = Convert.ToChar((sender as Button).Tag);
-                act = (Action)s;
-            }   
-            
-            setAction = true;
-
-            //OBSŁUGA WYŚWIETLACZA
-            if(s == 37) //Jeżeli znak to procent, to nie dodawaj pierwszej spacji (dla lepszego pokazania działania)
-                resultBox.Text = resultBox.Text + (sender as Button).Text + " z ";
-            else if(act == 0) //Jeżeli znak to pierwiastkowanie, to dodaj znak hashtag
-                resultBox.Text = resultBox.Text + " # ";
-            else //W innym wypadku zrób zapis standardowy
-                resultBox.Text = resultBox.Text + " " + (sender as Button).Tag + " ";
-        }
-
-        private void btnClick_Clear(object sender, EventArgs e)
-        {
-            Clear();
-            resultBox.Text = null;
-        }
-
-        private void btnClick_Equal(object sender, EventArgs e)
+        private void Solve()
         {
             try
             {
-                if(a != null && b != null)
+                if (a != null && b != null)
                 {
                     valA = Convert.ToDouble(a);
                     valB = Convert.ToDouble(b);
@@ -122,15 +182,15 @@ namespace Calculator
 
                         case (Action)94: //Potęgowanie
                             double ans = 1;
-                            for(int i = 0; i < valB; i++)
+                            for (int i = 0; i < valB; i++)
                             {
                                 ans = ans * valA;
                             }
                             resultBox.Text = resultBox.Text + " = \n" + ans;
                             break;
 
-                        case (Action)0: //Pierwiastkowanie
-                            if(valB == 2)
+                        case (Action)35: //Pierwiastkowanie
+                            if (valB == 2)
                                 resultBox.Text = resultBox.Text + " = \n" + Math.Sqrt(valA);
                             else
                                 resultBox.Text = resultBox.Text + " = \n" + Sqrt(valB, valA);
@@ -142,7 +202,7 @@ namespace Calculator
                     MessageBox.Show("Któraś z wartości jest pusta!", "Błąd podczas obliczeń.", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 string error = string.Format("Błąd podczas wyknywania obliczeń. Treśc błędu:\n {0}\n Źródło: {1}", ex.Message, ex.Source);
                 MessageBox.Show(error, "Nieznany błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -159,9 +219,11 @@ namespace Calculator
             a = null;
             setAction = false;
             newMath = true;
+            setNum = false;
             valA = 0;
             valB = 0;
             btn0.Enabled = true;
+            btnDot.Enabled = false;
         }
 
         //ALGORYTM PIERWIASTKOWANIA
@@ -176,7 +238,7 @@ namespace Calculator
             {
                 x = DynamicTab(x);
                 x[k + 1] = (1 / n) * (((n - 1) * x[k]) + (A / (Math.Pow(x[k], n - 1))));
-                if ((Math.Abs(x[k] - x[k + 1]) < 1))
+                if ((Math.Abs(x[k] - x[k + 1]) < 1)) //Dokładność obliczeń (0 = maks dokładność, nie działa)
                     return x[k + 1];
             }
         }
