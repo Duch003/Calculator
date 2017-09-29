@@ -213,6 +213,21 @@ namespace Calculator
             }
         }
 
+        private new void MouseEnter(object sender, EventArgs e)
+        {
+            (sender as Button).BackColor = System.Drawing.Color.ForestGreen;
+        }
+
+        private new void MouseLeave(object sender, EventArgs e)
+        {
+            (sender as Button).BackColor = System.Drawing.Color.CornflowerBlue;
+        }
+
+        private void ReFocus(object sender, EventArgs e)
+        {
+            resultBox.Focus();
+        }
+
         private void Clear()
         {
             b = null;
