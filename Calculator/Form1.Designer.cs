@@ -55,6 +55,7 @@
             // 
             this.resultBox.BackColor = System.Drawing.Color.Silver;
             this.resultBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.resultBox.Cursor = System.Windows.Forms.Cursors.IBeam;
             this.resultBox.Font = new System.Drawing.Font("Comic Sans MS", 35F);
             this.resultBox.Location = new System.Drawing.Point(20, 12);
             this.resultBox.Multiline = true;
@@ -73,12 +74,10 @@
             this.btnDot.Name = "btnDot";
             this.btnDot.Size = new System.Drawing.Size(75, 75);
             this.btnDot.TabIndex = 16;
-            this.btnDot.Tag = ".";
+            this.btnDot.Tag = ",";
             this.btnDot.Text = ".";
             this.btnDot.UseVisualStyleBackColor = false;
             this.btnDot.Click += new System.EventHandler(this.btnClick);
-            this.btnDot.MouseEnter += new System.EventHandler(this.MouseEnter);
-            this.btnDot.MouseLeave += new System.EventHandler(this.MouseLeave);
             // 
             // btnAddition
             // 

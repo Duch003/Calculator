@@ -22,16 +22,16 @@ namespace Calculator
         Action act;
         string a, b;
         bool setAction, newMath; //Warunki kolejno: czy jest ustawiony znak działania, czy rozpocząto nowe działanie
-        bool setNum; //Warunek czy jest wpisana pierwsza liczba
         double valA, valB;
 
         public MainCalc()
         {
             InitializeComponent();
             act = new Action();
-            setAction = newMath = setNum = false;
+            setAction = newMath = false;
             KeyPreview = true;
             btnDot.Enabled = false;
+            btnDot.BackColor = System.Drawing.Color.LightGray;
         }
 
         //PRZYCISKI W OKNIE KALKULATORA
@@ -39,7 +39,7 @@ namespace Calculator
         private void btnClick(object sender, EventArgs e)
         {
             char value = Convert.ToChar((sender as Button).Tag);
-            if (value >= 48 && value <= 57)
+            if ((value >= 48 && value <= 57) || value == 44)
             {
                 Number(value);
             }
@@ -49,6 +49,13 @@ namespace Calculator
             }
             else if(value == 61)
             {
+                if (Convert.ToDouble(b) == 0)
+                {
+                    string error = string.Format("Nie można dzielić przez 0!");
+                    MessageBox.Show(error, "Dzielenie przez 0", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    Clear();
+                    return;
+                }
                 Solve();
             }
             else if(value == 126) //Znak ~
@@ -64,8 +71,8 @@ namespace Calculator
         //e.KeyChar zwraca znak przekonwertowany już na ascii
         //Źródło: https://www.w3.org/2002/09/tests/keys-cancel2.html
         private void KeyboardKeyClick(object sender, KeyPressEventArgs e)
-        {
-            if ((e.KeyChar >= 48 && e.KeyChar <= 57) || e.KeyChar == 46 || e.KeyChar == 44)
+        {   // 0 - 9, lub precinek
+            if ((e.KeyChar >= 48 && e.KeyChar <= 57) || e.KeyChar == 44)
             {
                 Number(e.KeyChar);               
             }
@@ -75,7 +82,14 @@ namespace Calculator
             }
             else if(e.KeyChar == 13) //Znaki ENTER i numENTER, są to znaki /r, nowej linii
             {
-                Solve();
+                if(Convert.ToDouble(b) == 0)
+                {
+                    string error = string.Format("Nie można dzielić przez 0!");
+                    MessageBox.Show(error, "Dzielenie przez 0", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    Clear();
+                    return;
+                }
+                Solve(); 
             }
             else if(e.KeyChar == 27) //Znak ESC
             {
@@ -91,16 +105,7 @@ namespace Calculator
             if (setAction == true || a == null)
                 return;
 
-            //NISTANDARDOWE I DODATKOWE USTAWIENIA DLA POSZCZEGOLNYCH ZNAKÓW
-            if (value == 47) //Jeżeli jest to znak dzielenia, zablokuj 0 (do czasu wciśnięcia innej cyfry)
-            {
-                btn0.Enabled = false;
-                act = (Action)value;
-            }               
-            else //W innym przypadku postępuj standardowo
-            {
-                act = (Action)value;
-            }
+            act = (Action)value;
 
             //Oznaczenie setAction powoduje że następne cyfry są traktowane jako druga wartość
             setAction = true;
@@ -137,16 +142,13 @@ namespace Calculator
                 if(btnDot.Enabled == false)
                 {
                     btnDot.Enabled = true;
+                    btnDot.BackColor = System.Drawing.Color.CornflowerBlue;
                 }
             }
             //Wartość b
             else if (setAction == true)
             {
                 b = b + value;
-                if (btn0.Enabled == false)
-                {
-                    btn0.Enabled = true;
-                }
             }
         }
 
@@ -199,7 +201,8 @@ namespace Calculator
                 }
                 else
                 {
-                    MessageBox.Show("Któraś z wartości jest pusta!", "Błąd podczas obliczeń.", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    string error = string.Format("Któraś z wartości jest pusta!\nWartość a: {0}\nWartość b: {1}", a, b);
+                    MessageBox.Show(error, "Błąd podczas obliczeń.", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
             catch (Exception ex)
@@ -234,11 +237,11 @@ namespace Calculator
             a = null;
             setAction = false;
             newMath = true;
-            setNum = false;
             valA = 0;
             valB = 0;
             btn0.Enabled = true;
             btnDot.Enabled = false;
+            btnDot.BackColor = System.Drawing.Color.LightGray;
         }
 
         //ALGORYTM PIERWIASTKOWANIA
